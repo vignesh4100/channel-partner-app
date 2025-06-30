@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import axiosInstance from '@/utils/axiosInstance';
+import cp_leads_background from '@/assets/images/cp_leads_background.png';
+import cp_logo from '@/assets/images/cp_logo.png'; // Replace with your logo path
 
 export default function LeadsScreen() {
   const router = useRouter();
@@ -49,66 +52,65 @@ export default function LeadsScreen() {
     if (category === 'All') {
       setFilteredLeads(leads);
     } else {
-      const filtered = leads.filter(
-        (lead) => lead.status?.stage?.toLowerCase() === category.toLowerCase()
-      );
+      const filtered = leads.filter((lead) => {
+        const stage = (lead.stage || '').toLowerCase().trim();
+        const details = typeof lead.details === 'string' ? JSON.parse(lead.details) : lead.details;
+        if (category.toLowerCase() === 'dropout') {
+          return stage === 'dropout' || (!!details?.dropped_on || !!details?.drop_reason);
+        }
+        if (category.toLowerCase() === 'demo') {
+          return stage === 'demo' || stage === 'pre-sales';
+        }
+        return stage === category.toLowerCase();
+      });
       setFilteredLeads(filtered);
     }
   };
 
   const getStatusColor = (stage) => {
-    switch (stage?.toLowerCase()) {
-      case 'new': return '#ffbb08';
+    switch ((stage || '').toLowerCase()) {
+      case 'new': return '#34C759';
       case 'follow-up': return '#FF9500';
       case 'demo': return '#4A90E2';
       case 'pre-sales': return '#FFD700';
-      case 'sale completed': return '#34C759';
+      case 'sale-completed': return '#34C759';
       case 'dropout': return '#FF3B30';
-      default: return '#8E8E93';
+      default: return '#ccc';
     }
   };
 
-  const getCount = (stage) =>
-    stage === 'All'
-      ? leads.length
-      : leads.filter((lead) => lead.status?.stage?.toLowerCase() === stage.toLowerCase()).length;
+  const getCount = (stage) => {
+    if (stage === 'All') return leads.length;
+    return leads.filter((lead) => {
+      const stageVal = (lead.stage || '').toLowerCase().trim();
+      const details = typeof lead.details === 'string' ? JSON.parse(lead.details) : lead.details;
+      if (stage.toLowerCase() === 'dropout') {
+        return stageVal === 'dropout' || (!!details?.dropped_on || !!details?.drop_reason);
+      }
+      if (stage.toLowerCase() === 'demo') {
+        return stageVal === 'demo' || stageVal === 'pre-sales';
+      }
+      return stageVal === stage.toLowerCase();
+    }).length;
+  };
 
   const renderLeadItem = ({ item }) => (
     <Link href={`/lead/${item.id}`} asChild>
       <TouchableOpacity style={styles.leadCard}>
-        <View style={styles.leadHeader}>
-          <Text style={styles.companyName}>{item.companyName}</Text>
-          <Text style={[styles.status, { color: getStatusColor(item.status?.stage) }]}> {item.status?.stage || 'New'} </Text>
+        <View style={styles.leadCardHeader}>
+          <Text style={styles.company}>{item.company_name}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.stage) + '22' }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item.stage) }]}>
+              {(item.stage || 'New').charAt(0).toUpperCase() + (item.stage || 'New').slice(1)}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.contactName}>{item.contactName}</Text>
+        <Text style={styles.name}>{item.contact_name}</Text>
         <Text style={styles.email}>{item.email}</Text>
-
-        {item.status?.stage === 'Follow-Up' && (
-          <Text style={styles.statusDetail}>
-            Followed by {item.status.details.followedBy} on {new Date(item.status.details.lastCallDate).toLocaleString()}
-          </Text>
-        )}
-        {item.status?.stage === 'Demo' && (
-          <Text style={styles.statusDetail}>
-            Demo by {item.status.details.demoBy} on {new Date(item.status.details.demoDate).toLocaleString()}
-          </Text>
-        )}
-        {item.status?.stage === 'Pre-Sales' && item.status.details.quotationUrl && (
-          <Text style={styles.statusDetail}>
-            Quotation: <Text style={styles.link}>View PDF</Text>
-          </Text>
-        )}
-        {item.status?.stage === 'Sale Completed' && item.status.details.invoiceUrl && (
-          <Text style={styles.statusDetail}>
-            Invoice: <Text style={styles.link}>Download PDF</Text>
-          </Text>
-        )}
-
-        <View style={styles.footer}>
+        <View style={styles.dateInfo}>
+          <Text style={styles.meta}>Demo by on invalid date</Text>
           <Text style={styles.date}>
-            {item.createdAt?.seconds
-              ? new Date(item.createdAt.seconds * 1000).toLocaleDateString()
-              : 'N/A'}
+            {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -116,97 +118,118 @@ export default function LeadsScreen() {
   );
 
   return (
-    <>
-      <View style={styles.Nav}>
-        <View style={styles.navContent}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={24} color="#27375d" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Your Leads</Text>
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={styles.header}>
+        <Image source={cp_logo} style={styles.logo} />
+        <Text style={styles.headerTitle}>Leads</Text>
+      </View>
+
+      <View style={styles.backgroundWrapper}>
+        <Image source={cp_leads_background} style={styles.bgImage} resizeMode="cover" />
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={22} color="#27375d"/>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+
+        <View style={styles.cardGrid}>
+          {['All', 'Demo-completed', 'Sale-completed', 'Dropout'].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.card, activeCategory === cat && styles.activeCard]}
+              onPress={() => handleCategorySelect(cat)}
+            >
+              <Text style={styles.cardLabel}>
+                {cat === 'All' ? 'Total Leads' : cat.replace('-', ' ')}
+              </Text>
+              <Text style={styles.cardCount}>{getCount(cat)}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      <View style={styles.cardGrid}>
-        {['All', 'Demo', 'Sale Completed', 'Dropout'].map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.card, activeCategory === cat && styles.activeCard]}
-            onPress={() => handleCategorySelect(cat)}
-          >
-            <Text style={styles.cardLabel}>{cat === 'All' ? 'Total Leads' : cat}</Text>
-            <Text style={styles.cardCount}>{getCount(cat)}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.container}>
-        {refreshing ? (
-          <ActivityIndicator size="large" color="#ffbb08" />
-        ) : (
-          <FlatList
-            data={filteredLeads}
-            renderItem={renderLeadItem}
-            keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ffbb08']} />}
-            contentContainerStyle={styles.listContainer}
-            ListEmptyComponent={<Text style={styles.emptyText}>No leads found.</Text>}
-          />
-        )}
-      </View>
-    </>
+      <FlatList
+        data={filteredLeads}
+        renderItem={renderLeadItem}
+        keyExtractor={(item) => item.id.toString()}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#FF7B00']} />
+        }
+        contentContainerStyle={{ padding: 15 }}
+      />
+    </View>
   );
 }
+
 const styles = StyleSheet.create({
-  Nav: {
-    width: '100%',
-    height: 80,
-    backgroundColor: '#ffbb08',
-    justifyContent: 'center',
-    paddingTop: 25,
-  },
-  navContent: {
+  header: {
+    paddingTop: 50,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    gap: 10,
   },
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
+  logo: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
   },
-  title: {
+  headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#27375d',
-    textAlign: 'left',
-    marginLeft: 20,
+    fontWeight: 'semibold',
+    color: 'black',
+  },
+  backgroundWrapper: {
+    position: 'relative',
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    paddingBottom: 40,
+  },
+  bgImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: 235,
+    opacity: 0.4,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 20,
+    opacity: 0.5,
+  },
+  backText: {
+    color: 'black',
+    fontSize: 16,
+    marginLeft: 4,
   },
   cardGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingTop: 15,
-    gap: 10,
+    rowGap: 16,
+    paddingBottom: 10,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
     width: '48%',
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
-    elevation: 2,
+    borderColor: '#FF7B00',
+    borderRadius: 10,
+    padding: 12,
+    paddingRight: 16,
+    backgroundColor: '#fff',
   },
   activeCard: {
-    borderColor: '#27375d',
+    backgroundColor: '#fff7eb',
   },
   cardLabel: {
     fontSize: 13,
-    color: '#555',
+    color: '#333',
     fontWeight: '600',
   },
   cardCount: {
@@ -214,68 +237,60 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#27375d',
   },
-  listContainer: {
-    padding: 15,
-  },
   leadCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     marginBottom: 15,
     shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
     elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: '#ffbb08',
   },
-  leadHeader: {
+  leadCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  companyName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#27375d',
-  },
-  status: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  statusDetail: {
-    fontSize: 12,
-    color: '#666',
-    marginVertical: 4,
-  },
-  link: {
-    color: '#007AFF',
-    textDecorationLine: 'underline',
-  },
-  contactName: {
+  company: {
     fontSize: 16,
-    color: '#4a4a4a',
-    marginBottom: 4,
+    fontWeight: '600',
+    color: 'black',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+    // marginTop: 2,
   },
   email: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
-    marginBottom: 8,
+    marginTop: 2,
   },
-  footer: {
+  dateInfo: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 17,
+  },
+  meta: {
+    fontSize: 12,
+    color: '#999',
   },
   date: {
     fontSize: 12,
-    color: '#8e8e93',
-  },
-  emptyText: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#888',
-    marginTop: 20,
+    color: '#aaa',
+    textAlign: 'right',
   },
 });

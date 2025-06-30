@@ -13,7 +13,13 @@ import * as SecureStore from 'expo-secure-store';
 import axiosInstance from '@/utils/axiosInstance';
 
 export default function NewLeadScreen() {
-  const [formData, setFormData] = useState({ companyName: "", email: "", phone: "", contactName: "" });
+  const [formData, setFormData] = useState({
+    companyName: "",
+    email: "",
+    phone: "",
+    contactName: ""
+  });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [userStatus, setUserStatus] = useState(null);
   const router = useRouter();
@@ -23,8 +29,7 @@ export default function NewLeadScreen() {
       try {
         const cpId = await SecureStore.getItemAsync('cpId');
         if (!cpId) return;
-
-        const response = await axiosInstance.get(`/get-cp-members/${cpId}`);
+        const response = await axiosInstance.get(`/get-cp-details/${cpId}`);
         setUserStatus(response.data.cp.status); // 'active' or 'inactive'
       } catch (error) {
         console.log("Error fetching user status:", error.message);
@@ -37,9 +42,33 @@ export default function NewLeadScreen() {
   const handleAddLead = async () => {
     if (userStatus !== 'active') {
       Alert.alert(
+
+
+
+
+
+
+
+
+        
         "Account Inactive",
         "You are unable to add a lead without uploading the agreement. Please upload the agreement. Once approved by admin, you'll be able to submit leads."
       );
+      return;
+    }
+
+    const newErrors = {};
+    if (!formData.companyName.trim()) newErrors.companyName = "Company name is required";
+    if (!formData.contactName.trim()) newErrors.contactName = "Contact person is required";
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = "Enter a valid email address";
+    }
+    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -55,6 +84,7 @@ export default function NewLeadScreen() {
 
       Alert.alert("Success", "Lead added successfully.");
       setFormData({ companyName: "", email: "", phone: "", contactName: "" });
+      setErrors({});
       setLoading(false);
       router.push('/leads');
     } catch (error) {
@@ -66,7 +96,7 @@ export default function NewLeadScreen() {
   return (
     <>
       <View style={styles.Nav}>
-        <Text style={styles.title}>Create New lead</Text>
+        <Text style={styles.title}>Create New Lead</Text>
       </View>
       <ScrollView style={styles.container}>
         {userStatus === 'inactive' && (
@@ -76,49 +106,70 @@ export default function NewLeadScreen() {
         )}
         <View style={styles.content}>
           <View style={styles.form}>
+            {/* Company Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Company Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.companyName && styles.inputError]}
                 value={formData.companyName}
-                onChangeText={(text) => setFormData({ ...formData, companyName: text })}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, companyName: text });
+                  if (errors.companyName) setErrors({ ...errors, companyName: null });
+                }}
                 placeholder="Enter company name"
               />
+              {errors.companyName && <Text style={styles.errorText}>{errors.companyName}</Text>}
             </View>
 
+            {/* Contact Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Contact Person</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.contactName && styles.inputError]}
                 value={formData.contactName}
-                onChangeText={(text) => setFormData({ ...formData, contactName: text })}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, contactName: text });
+                  if (errors.contactName) setErrors({ ...errors, contactName: null });
+                }}
                 placeholder="Enter contact person name"
               />
+              {errors.contactName && <Text style={styles.errorText}>{errors.contactName}</Text>}
             </View>
 
+            {/* Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.email && styles.inputError]}
                 value={formData.email}
-                onChangeText={(text) => setFormData({ ...formData, email: text })}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, email: text });
+                  if (errors.email) setErrors({ ...errors, email: null });
+                }}
                 placeholder="Enter email address"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
+            {/* Phone */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Phone</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.phone && styles.inputError]}
                 value={formData.phone}
-                onChangeText={(text) => setFormData({ ...formData, phone: text })}
+                onChangeText={(text) => {
+                  setFormData({ ...formData, phone: text });
+                  if (errors.phone) setErrors({ ...errors, phone: null });
+                }}
                 placeholder="Enter phone number"
                 keyboardType="phone-pad"
               />
+              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
             </View>
 
+            {/* Submit Button */}
             <TouchableOpacity
               style={[styles.button, userStatus !== 'active' && { backgroundColor: '#aaa' }]}
               onPress={handleAddLead}
@@ -180,9 +231,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
+  inputError: {
+    borderWidth: 1.5,
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 13,
+    marginTop: 5,
   },
   button: {
     backgroundColor: '#27375d',

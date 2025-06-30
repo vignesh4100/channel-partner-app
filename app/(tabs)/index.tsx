@@ -1,35 +1,54 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Dimensions,
+} from 'react-native';
 import { Link } from 'expo-router';
-import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import cp_dashboard from '@/assets/images/cp_dashboard.png';
+import cp_logo from '@/assets/images/cp_logo.png';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.dashboard}>Dashboard</Text>
-        <Text style={styles.subheading}>Welcome Channel Partner</Text>
+      <View style={styles.topSection}>
+        <View style={styles.logoRow}>
+          <Image
+            source={cp_logo}
+            style={styles.logoIcon}
+          />
+          <View>
+            <Text style={styles.helloText}>Hello,</Text>
+            <Text style={styles.userName}>Aakash!</Text>
+          </View>
+        </View>
+        <Ionicons name="notifications-outline" size={22} color="#FF7B00" />
       </View>
 
-      <View style={styles.cardContainer}>
+      <Image source={cp_dashboard} style={styles.dashboardImage} resizeMode="contain" />
+
+      <View style={styles.buttonWrapper}>
         <Link href="/leads" asChild>
-          <TouchableOpacity style={styles.card}>
-            <Ionicons name="people-outline" size={32} color="#27375d" />
-            <Text style={styles.cardLabel}>Leads</Text>
+          <TouchableOpacity style={styles.btn}>
+            <Text style={styles.btnText}>Leads</Text>
           </TouchableOpacity>
         </Link>
 
-        <Link href="/business" asChild>
-          <TouchableOpacity style={styles.card}>
-            <MaterialIcons name="business-center" size={32} color="#27375d" />
-            <Text style={styles.cardLabel}>Business</Text>
+        <Link href="/BusinessScreen" asChild>
+          <TouchableOpacity style={styles.btn}>
+            <Text style={styles.btnText}>Business</Text>
           </TouchableOpacity>
         </Link>
 
         <Link href="/agreement-upload" asChild>
-          <TouchableOpacity style={styles.card}>
-            <Feather name="upload" size={32} color="#27375d" />
-            <Text style={styles.cardLabel}>Upload Agreement</Text>
+          <TouchableOpacity style={styles.btn}>
+            <Text style={styles.btnText}>Upload Agreement</Text>
           </TouchableOpacity>
         </Link>
       </View>
@@ -40,45 +59,75 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f8f8f8',
   },
-  header: {
+  topSection: {
     paddingTop: 50,
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  dashboard: {
-    fontSize: 26,
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+    resizeMode: 'contain',
+  },
+  helloText: {
+    fontSize: 14,
+    color: '#000',
+    opacity: 0.6,
+  },
+  userName: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#27375d',
+    color: '#FF7B00',
   },
-  subheading: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
+  dashboardImage: {
+    width: width,
+    height: width * 0.6,
+    marginVertical: '12%',
   },
-  cardContainer: {
-    padding: 20,
-    gap: 20,
+  buttonWrapper: {
+    marginTop: 30,
+    alignItems: 'center',
+    gap: 30,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderWidth: 1.5,
-    borderColor: '#27375d',
-    borderRadius: 16,
-    paddingVertical: 24,
+  btn: {
+    width: width * 0.75,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderColor: '#FF7B00',
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
   },
-  cardLabel: {
-    marginTop: 10,
+  btnText: {
     fontSize: 16,
-    color: '#ffbb08',
-    fontWeight: '600',
+    color: '#444',
+    fontWeight: '500',
+  },
+  bottomNav: {
+    position: 'absolute',
+    bottom: 20,
+    width: width,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  plusBtn: {
+    backgroundColor: '#FF7B00',
+    padding: 14,
+    borderRadius: 50,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
 });
